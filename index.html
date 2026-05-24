@@ -1,0 +1,1816 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Visita Calidad</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f7f5;--surface:#fff;--card:#fff;--border:#e5e5e0;--border2:#d1d5db;
+  --accent:#1a4fa0;--accent-light:#dbeafe;--accent-dark:#1e3a7a;
+  --text:#111827;--muted:#6b7280;--muted2:#9ca3af;
+  --green:#16a34a;--green-bg:#f0fdf4;--green-border:#86efac;
+  --red:#dc2626;--red-bg:#fef2f2;--red-border:#fca5a5;
+  --blue:#2563eb;--blue-bg:#eff6ff;--blue-border:#93c5fd;
+  --r:10px;
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;min-height:100vh;padding-bottom:90px}
+
+/* HEADER */
+.hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px 10px;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.hdr-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.logo-wrap{display:flex;align-items:center;gap:9px}
+.logo{width:34px;height:34px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.hdr h1{font-size:15px;font-weight:700}
+.hdr p{font-size:11px;color:var(--muted)}
+
+/* PROGRESS */
+.progress-wrap{margin-bottom:8px}
+.progress-bar-bg{height:4px;background:var(--border);border-radius:4px;overflow:hidden}
+.progress-bar-fill{height:4px;background:var(--accent);border-radius:4px;transition:width .3s}
+.progress-label{font-size:11px;color:var(--muted);margin-top:4px;text-align:right}
+
+/* STEPPER */
+.stepper{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px}
+.stepper::-webkit-scrollbar{display:none}
+.step-btn{flex-shrink:0;padding:5px 11px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.step-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.step-btn.done{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+
+/* SECTIONS */
+.section{display:none;padding:14px}
+.section.active{display:block}
+
+/* CARD */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+
+/* FIELD */
+.field{margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.field-label{font-size:13px;color:var(--muted);font-weight:500;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.field-dot{width:7px;height:7px;background:var(--accent);border-radius:50%;flex-shrink:0;margin-top:1px}
+
+/* INPUTS */
+input[type=text],input[type=date],input[type=number],textarea{
+  width:100%;background:#fff;border:1px solid var(--border2);border-radius:8px;
+  padding:10px 12px;color:var(--text);font-size:15px;outline:none;
+  transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;
+}
+input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,79,160,.12)}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+
+/* OPTION PILLS */
+.pill-group{display:flex;flex-wrap:wrap;gap:8px}
+.pill{padding:8px 14px;border-radius:20px;border:1px solid var(--border2);background:#fff;color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;user-select:none;-webkit-tap-highlight-color:transparent}
+.pill.selected{background:var(--accent-light);border-color:var(--accent);color:var(--accent-dark);font-weight:600}
+.pill.si{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.pill.no{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}
+
+/* OTHER INPUT */
+.other-input{margin-top:8px;display:none}
+.other-input.show{display:block}
+
+/* TOGGLE */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0}
+.tgl-label{font-size:14px;font-weight:500}
+.tgl{position:relative;width:44px;height:26px;flex-shrink:0}
+.tgl input{opacity:0;width:0;height:0}
+.tgl-slider{position:absolute;inset:0;background:#d1d5db;border-radius:26px;cursor:pointer;transition:background .2s}
+.tgl-slider:before{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tgl input:checked+.tgl-slider{background:var(--accent)}
+.tgl input:checked+.tgl-slider:before{transform:translateX(18px)}
+
+/* REQUIRED */
+.required-star{color:var(--red);margin-left:3px;font-weight:700}
+.field-error input,.field-error textarea{border-color:var(--red)!important;box-shadow:0 0 0 3px rgba(220,38,38,.1)!important}
+.field-error-msg{font-size:12px;color:var(--red);font-weight:600;margin-top:5px;display:none}
+.field-error .field-error-msg{display:block}
+
+/* REQUIRED */
+.meter-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+.unit-badge{padding:10px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--muted);font-size:13px;white-space:nowrap;font-weight:600}
+
+/* PHOTOS */
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.photo-thumb{aspect-ratio:1;border-radius:8px;overflow:hidden;position:relative;background:var(--bg);border:1px solid var(--border)}
+.photo-thumb img{width:100%;height:100%;object-fit:cover}
+.photo-del{position:absolute;top:4px;right:4px;width:22px;height:22px;background:rgba(0,0,0,.55);border:none;border-radius:50%;color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.photo-add-btn{aspect-ratio:1;border-radius:8px;border:2px dashed var(--border2);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;color:var(--muted);font-size:12px;font-weight:600}
+.photo-add-btn .ph-icon{font-size:26px}
+#photoInput,#medicionInput{display:none}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:10px 14px;display:flex;gap:10px;z-index:200;box-shadow:0 -2px 8px rgba(0,0,0,.07)}
+.nav-btn{flex:1;padding:13px;border-radius:10px;border:none;font-size:15px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.nav-prev{background:var(--bg);color:var(--muted);border:1px solid var(--border2)}
+.nav-next{background:var(--accent);color:#fff}
+.nav-gen{background:var(--accent);color:#fff}
+
+/* INFO */
+.info-box{background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:9px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--blue);line-height:1.5}
+
+/* SUMMARY */
+.sum-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px}
+.sum-row:last-child{border-bottom:none}
+.sum-key{color:var(--muted);font-size:13px;flex-shrink:0;max-width:45%}
+.sum-val{color:var(--text);font-weight:600;text-align:right;word-break:break-word}
+.sum-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
+.sum-ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.sum-warn{background:var(--accent-light);color:var(--accent-dark);border:1px solid #93c5fd}
+.sum-bad{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+
+.sn-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+.sn-num{font-size:12px;font-weight:700;color:var(--accent-dark);background:var(--accent-light);width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sn-del{width:34px;height:34px;background:var(--red-bg);border:1px solid var(--red-border);border-radius:8px;color:var(--red);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* FOTO ITEM */
+.foto-item{display:grid;grid-template-columns:90px 1fr;gap:10px;align-items:start;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:9px}
+.foto-thumb-sm{width:90px;height:90px;border-radius:7px;overflow:hidden;position:relative;flex-shrink:0}
+.foto-thumb-sm img{width:100%;height:100%;object-fit:cover}
+.foto-del-sm{position:absolute;top:3px;right:3px;width:20px;height:20px;background:rgba(0,0,0,.6);border:none;border-radius:50%;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.foto-info{display:flex;flex-direction:column;gap:6px;padding-top:2px}
+.foto-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.4px}
+
+/* CAMPOS EXTRA */
+.extra-fields-panel{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:14px;margin-bottom:12px}
+.extra-field-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-bottom:8px}
+.extra-field-row:last-child{margin-bottom:0}
+.extra-del{width:32px;height:32px;background:var(--red-bg);border:1px solid var(--red-border);border-radius:7px;color:var(--red);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* TOAST */
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--text);color:#fff;font-size:13px;font-weight:600;padding:10px 20px;border-radius:20px;opacity:0;transition:all .3s;z-index:999;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.add-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:9px;border:1.5px dashed var(--border2);background:#fff;color:var(--accent);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.add-btn:active{background:var(--accent-light)}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-row">
+    <div class="logo-wrap">
+      <img src="data:image/jpeg;base64,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" style="width:52px;height:52px;object-fit:contain;border-radius:6px;">
+      <div><h1>Visita Calidad</h1></div>
+    </div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:20%"></div></div>
+    <div class="progress-label" id="progressLabel">Paso 1 de 5</div>
+  </div>
+  <div class="stepper">
+    <button class="step-btn active" onclick="goTo(0)">Cliente</button>
+    <button class="step-btn" onclick="goTo(1)">Equipos</button>
+    <button class="step-btn" onclick="goTo(2)">Instalación</button>
+    <button class="step-btn" onclick="goTo(3)">Archivos</button>
+    <button class="step-btn" onclick="goTo(4)">Resumen</button>
+  </div>
+</div>
+
+<!-- ═══════════ PASO 0: CLIENTE ═══════════ -->
+<div class="section active" id="sec0">
+  <div class="card">
+    <div class="card-title">Datos del cliente</div>
+
+    <div class="field" id="fieldIdCliente">
+      <label class="field-label"><span class="field-dot"></span>ID Cliente<span class="required-star">*</span></label>
+      <input type="text" id="idCliente" placeholder="Número de cuenta o ID">
+      <div class="field-error-msg">Este campo es obligatorio</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="field-dot"></span>Viñeta / Nodo</label>
+      <input type="text" id="vineta" placeholder="Identificador de nodo">
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="field-dot"></span>Fecha de auditoría</label>
+      <input type="date" id="fecha">
+    </div>
+
+    <div class="field" id="fieldObservaciones">
+      <label class="field-label"><span class="field-dot"></span>Observaciones generales<span class="required-star">*</span></label>
+      <textarea id="observaciones" placeholder="Hallazgos, anomalías, recomendaciones..." rows="4"></textarea>
+      <div class="field-error-msg">Este campo es obligatorio</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ PASO 1: EQUIPOS ═══════════ -->
+<div class="section" id="sec1">
+  <div class="card">
+    <div class="card-title">Cable Modem</div>
+
+    <div class="field">
+      <label class="field-label"><span class="field-dot"></span>Modelo / MAC CM</label>
+      <input type="text" id="modeloCM" placeholder="ej. Arris SB6183 / AA:BB:CC:DD">
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="field-dot"></span>Velocidad contratada</label>
+      <div class="pill-group" id="velocidad">
+        <div class="pill" onclick="selectPill(this,'velocidad')">100 Mbps</div>
+        <div class="pill" onclick="selectPill(this,'velocidad')">120 Mbps</div>
+        <div class="pill" onclick="selectPill(this,'velocidad')">200 Mbps</div>
+        <div class="pill" onclick="selectPill(this,'velocidad')">300 Mbps</div>
+        <div class="pill" onclick="selectPill(this,'velocidad',true)">Otro</div>
+      </div>
+      <div class="other-input" id="velocidad_other">
+        <input type="text" id="velocidad_otherVal" placeholder="Especificá la velocidad">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Set Top Box (STB)</div>
+
+    <div class="field">
+      <label class="field-label"><span class="field-dot"></span>Cantidad de STB</label>
+      <div class="pill-group" id="cantStb">
+        <div class="pill" onclick="selectSiNo(this,'cantStb','no');toggleSTB(false)">No tiene</div>
+        <div class="pill" onclick="selectPill(this,'cantStb');toggleSTB(true)">1</div>
+        <div class="pill" onclick="selectPill(this,'cantStb');toggleSTB(true)">2</div>
+        <div class="pill" onclick="selectPill(this,'cantStb',true);toggleSTB(true)">Otro</div>
+      </div>
+      <div class="other-input" id="cantStb_other">
+        <input type="text" id="cantStb_otherVal" placeholder="Cantidad de STB">
+      </div>
+    </div>
+
+    <div id="snField" class="field">
+      <label class="field-label"><span class="field-dot"></span>S/N de decodificadores</label>
+      <div id="snList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+      <button type="button" class="add-btn" onclick="addSN()">+ Agregar S/N</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ PASO 2: INSTALACIÓN ═══════════ -->
+<div class="section" id="sec2">
+  <div class="card">
+    <div class="card-title">Infraestructura</div>
+
+    <div class="field" id="fieldMetroExt">
+      <label class="field-label"><span class="field-dot"></span>Cable utilizado externo</label>
+      <div class="pill-group" style="margin-bottom:8px" id="metroExtNA">
+        <div class="pill" onclick="toggleMetroNA(false)">📏 Ingresar valor</div>
+        <div class="pill" onclick="toggleMetroNA(true)">🚫 N/A</div>
+      </div>
+      <div id="metroExtInput" class="meter-row">
+        <input type="number" id="metroExt" placeholder="0" min="0" step="0.5">
+        <div class="unit-badge">metros</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="field-dot"></span>Cable utilizado interno</label>
+      <div class="meter-row">
+        <input type="number" id="metroInt" placeholder="0" min="0" step="0.5">
+        <div class="unit-badge">metros</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="field-dot"></span>Cantidad de conectores F</label>
+      <div class="pill-group" id="conectoresF">
+        <div class="pill" onclick="selectPill(this,'conectoresF')">2</div>
+        <div class="pill" onclick="selectPill(this,'conectoresF')">4</div>
+        <div class="pill" onclick="selectPill(this,'conectoresF')">5</div>
+        <div class="pill" onclick="selectPill(this,'conectoresF')">6</div>
+        <div class="pill" onclick="selectPill(this,'conectoresF')">7</div>
+        <div class="pill" onclick="selectPill(this,'conectoresF')">8</div>
+        <div class="pill" onclick="selectPill(this,'conectoresF')">9</div>
+        <div class="pill" onclick="selectPill(this,'conectoresF')">10</div>
+        <div class="pill" onclick="selectPill(this,'conectoresF')">12</div>
+        <div class="pill" onclick="selectPill(this,'conectoresF')">14</div>
+        <div class="pill" onclick="selectPill(this,'conectoresF')">16</div>
+        <div class="pill" onclick="selectPill(this,'conectoresF',true)">Otro</div>
+      </div>
+      <div class="other-input" id="conectoresF_other">
+        <input type="number" id="conectoresF_otherVal" placeholder="Cantidad exacta de conectores F" min="1">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="field-dot"></span>Grapas utilizadas</label>
+      <input type="text" id="grapas" placeholder="Cantidad y tipo de grapas">
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="field-dot"></span>Clamp Cut</label>
+      <div class="pill-group" id="clampcut">
+        <div class="pill" onclick="selectPill(this,'clampcut')">✅ Sí</div>
+        <div class="pill" onclick="selectPill(this,'clampcut')">No</div>
+        <div class="pill" onclick="selectPill(this,'clampcut',true)">Otro</div>
+      </div>
+      <div class="other-input" id="clampcut_other">
+        <input type="text" id="clampcut_otherVal" placeholder="Observación sobre clamp cut">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="field-dot"></span>Mástil</label>
+      <div class="pill-group" id="mastil">
+        <div class="pill" onclick="selectPill(this,'mastil')">✅ Sí</div>
+        <div class="pill" onclick="selectPill(this,'mastil')">No</div>
+        <div class="pill" onclick="selectPill(this,'mastil',true)">Otro</div>
+      </div>
+      <div class="other-input" id="mastil_other">
+        <input type="text" id="mastil_otherVal" placeholder="Observación sobre mástil">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="field-dot"></span>Isolator</label>
+      <div class="pill-group" id="isolador">
+        <div class="pill" onclick="selectSiNo(this,'isolador','si')">✅ Sí</div>
+        <div class="pill" onclick="selectSiNo(this,'isolador','no')">❌ No</div>
+        <div class="pill" onclick="selectPill(this,'isolador',true)">Otro</div>
+      </div>
+      <div class="other-input" id="isolador_other">
+        <input type="text" id="isolador_otherVal" placeholder="Observación sobre isolator">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="field-dot"></span>Splitters instalados</label>
+      <div class="pill-group" id="cantSplitters">
+        <div class="pill" onclick="selectPill(this,'cantSplitters');renderSplitters(0)">No hay</div>
+        <div class="pill" onclick="selectPill(this,'cantSplitters');renderSplitters(1)">1</div>
+        <div class="pill" onclick="selectPill(this,'cantSplitters');renderSplitters(2)">2</div>
+        <div class="pill" onclick="selectPill(this,'cantSplitters');renderSplitters(3)">3</div>
+        <div class="pill" onclick="selectPill(this,'cantSplitters',true);renderSplitters(0)">Otro</div>
+      </div>
+      <div class="other-input" id="cantSplitters_other">
+        <input type="text" id="cantSplitters_otherVal" placeholder="Cantidad de splitters">
+      </div>
+      <div id="splittersList" style="margin-top:12px;display:flex;flex-direction:column;gap:12px"></div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="field-dot"></span>FAN / Atenuador</label>
+      <div class="pill-group" id="fan">
+        <div class="pill" onclick="selectSiNo(this,'fan','si');toggleFan(true)">✅ Sí</div>
+        <div class="pill" onclick="selectSiNo(this,'fan','no');toggleFan(false)">❌ No</div>
+        <div class="pill" onclick="selectPill(this,'fan',true);toggleFan(true)">Otro</div>
+      </div>
+      <div class="other-input" id="fan_other">
+        <input type="text" id="fan_otherVal" placeholder="Observación del atenuador">
+      </div>
+      <div id="fanValDiv" style="display:none;margin-top:8px">
+        <input type="text" id="fanVal" placeholder="Valor del atenuador (opcional, ej. 6dB)">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Calidad de instalación</div>
+
+    <div class="field">
+      <label class="field-label"><span class="field-dot"></span>¿La instalación fue estética?</label>
+      <div class="pill-group" id="estetica">
+        <div class="pill" onclick="selectSiNo(this,'estetica','si')">✅ Sí</div>
+        <div class="pill" onclick="selectSiNo(this,'estetica','no')">❌ No</div>
+        <div class="pill" onclick="selectPill(this,'estetica',true)">Otro</div>
+      </div>
+      <div class="other-input" id="estetica_other">
+        <input type="text" id="estetica_otherVal" placeholder="Observación estética">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="field-dot"></span>Calificación de la instalación</label>
+      <div class="pill-group" id="calificacion">
+        <div class="pill" onclick="selectPill(this,'calificacion')" style="border-color:#86efac;color:#16a34a">✅ Buena</div>
+        <div class="pill" onclick="selectPill(this,'calificacion')" style="border-color:#fcd34d;color:#92400e">⚠️ Regular</div>
+        <div class="pill" onclick="selectPill(this,'calificacion')" style="border-color:#fca5a5;color:#dc2626">❌ Deficiente</div>
+        <div class="pill" onclick="selectPill(this,'calificacion',true)">Otro</div>
+      </div>
+      <div class="other-input" id="calificacion_other">
+        <input type="text" id="calificacion_otherVal" placeholder="Describe la calificación">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Campos adicionales</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Agregá cualquier campo extra para este reporte.</p>
+    <div id="extraFieldsList"></div>
+    <button class="add-btn" onclick="addExtraField()">+ Agregar campo</button>
+  </div>
+</div>
+
+<!-- ═══════════ PASO 3: ARCHIVOS ═══════════ -->
+<div class="section" id="sec3">
+  <div class="info-box">
+    📲 <strong>iPhone Safari:</strong> después de generar el PDF, tocá el ícono compartir y elegí <em>Guardar en Archivos</em>.
+  </div>
+
+  <div class="card">
+    <div class="card-title">Fotografías de auditoría</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Cada foto tiene su campo de comentario.</p>
+    <div id="photoList" style="display:flex;flex-direction:column;gap:12px"></div>
+    <button class="add-btn" style="margin-top:10px" onclick="document.getElementById('photoInput').click()">
+      📷 Agregar foto
+    </button>
+    <input type="file" id="photoInput" accept="image/*" multiple onchange="handlePhotos(this)">
+  </div>
+
+  <div class="card">
+    <div class="card-title">Mediciones / Niveles de señal</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Subí captura o foto del medidor — se incluirá en el PDF.</p>
+    <div id="medList" style="display:flex;flex-direction:column;gap:12px"></div>
+    <button class="add-btn" style="margin-top:10px" onclick="document.getElementById('medicionInput').click()">
+      📊 Agregar medición
+    </button>
+    <input type="file" id="medicionInput" accept="image/*" multiple onchange="handleMediciones(this)">
+  </div>
+</div>
+
+<!-- ═══════════ PASO 4: RESUMEN ═══════════ -->
+<div class="section" id="sec4">
+  <div class="card">
+    <div class="card-title">Resumen del reporte</div>
+    <div id="summaryContent"></div>
+  </div>
+
+  <div class="card" style="text-align:center;padding:24px 16px">
+    <div style="font-size:36px;margin-bottom:8px">📄</div>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:16px">Generá el PDF y compartilo desde el navegador</p>
+    <button class="nav-btn nav-gen" style="width:100%;font-size:16px;margin-bottom:10px" onclick="generatePDF()">
+      Generar y abrir PDF
+    </button>
+    <button class="nav-btn" style="width:100%;font-size:15px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);border-radius:10px;padding:13px;font-weight:700;cursor:pointer;margin-bottom:10px" onclick="agregarAlExcel()">
+      📊 Agregar al Excel del día
+    </button>
+    <button class="nav-btn" style="width:100%;font-size:15px;background:var(--bg);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:13px;font-weight:700;cursor:pointer" onclick="limpiarFormulario()">
+      🗑 Nueva visita (limpiar campos)
+    </button>
+  </div>
+
+  <div class="card" id="excelDayCard">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Visitas del día</span>
+      <span id="visitasCount" style="background:var(--accent-light);color:var(--accent);font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700">0 visitas</span>
+    </div>
+    <div id="visitasList" style="margin-bottom:12px;display:flex;flex-direction:column;gap:6px">
+      <p style="color:var(--muted);font-size:13px;text-align:center;padding:8px 0">Aún no hay visitas guardadas hoy.</p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="nav-btn" style="flex:1;padding:11px;font-size:14px;background:var(--accent);color:#fff;border-radius:9px;border:none;font-weight:700;cursor:pointer" onclick="exportarExcel()">
+        ⬇️ Exportar Excel
+      </button>
+      <button class="nav-btn" style="width:44px;height:44px;flex:none;padding:0;background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:9px;font-size:18px;cursor:pointer" onclick="limpiarVisitas()" title="Limpiar visitas del día">🗑</button>
+    </div>
+    <button onclick="limpiarExcelAcumulado()" style="width:100%;margin-top:8px;padding:9px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--muted);font-size:12px;cursor:pointer">
+      🗑 Borrar historial acumulado completo
+    </button>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-btn nav-prev" id="btnPrev" onclick="navigate(-1)" style="display:none">← Anterior</button>
+  <button class="nav-btn nav-next" id="btnNext" onclick="navigate(1)">Siguiente →</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── LOGO ───
+const LOGO_DATA = document.querySelector('img[src^="data:image"]')?.src || null;
+
+// ─── INDEXEDDB PARA FOTOS ───
+let fotosDB = null;
+
+function abrirDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('visitaCalidadDB', 1);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('fotos')) db.createObjectStore('fotos', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('mediciones')) db.createObjectStore('mediciones', { keyPath: 'id' });
+    };
+    req.onsuccess = e => { fotosDB = e.target.result; resolve(fotosDB); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function guardarFotosDB(arr, store) {
+  if (!fotosDB) return;
+  const tx = fotosDB.transaction(store, 'readwrite');
+  const s = tx.objectStore(store);
+  await s.clear();
+  arr.forEach((f, i) => s.put({ id: i, dataUrl: f.dataUrl, caption: f.caption || '' }));
+}
+
+async function leerFotosDB(store) {
+  if (!fotosDB) return [];
+  return new Promise(resolve => {
+    const tx = fotosDB.transaction(store, 'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => resolve([]);
+  });
+}
+
+async function limpiarFotosDB() {
+  if (!fotosDB) return;
+  ['fotos','mediciones'].forEach(store => {
+    const tx = fotosDB.transaction(store, 'readwrite');
+    tx.objectStore(store).clear();
+  });
+}
+let currentStep = 0;
+const totalSteps = 5;
+const photos = [];    // {dataUrl, caption}
+const mediciones = []; // {dataUrl}
+
+// ─── PILL SELECTION ───
+function selectPill(el, groupId, isOther = false) {
+  const group = document.getElementById(groupId);
+  group.querySelectorAll('.pill').forEach(p => {
+    p.classList.remove('selected', 'si', 'no');
+  });
+  el.classList.add('selected');
+  const otherDiv = document.getElementById(groupId + '_other');
+  if (otherDiv) otherDiv.classList.toggle('show', isOther);
+}
+
+function selectSiNo(el, groupId, type) {
+  const group = document.getElementById(groupId);
+  group.querySelectorAll('.pill').forEach(p => p.classList.remove('selected', 'si', 'no'));
+  el.classList.add(type); // 'si' or 'no'
+  const otherDiv = document.getElementById(groupId + '_other');
+  if (otherDiv) otherDiv.classList.remove('show');
+}
+
+// ─── TOGGLE STB ───
+function toggleSTB(show) {
+  document.getElementById('snField').style.display = show ? 'block' : 'none';
+}
+
+// ─── TOGGLE TERMINADORES COMENTARIO ───
+function toggleTermComentario(show, id) {
+  const div = document.getElementById('termComentarioDiv_' + id);
+  if (!div) return;
+  div.style.display = show ? 'block' : 'none';
+  if (!show) { const ta = div.querySelector('textarea'); if(ta) ta.value = ''; }
+}
+
+// ─── RENDER SPLITTERS DINÁMICO ───
+function renderSplitters(count) {
+  const container = document.getElementById('splittersList');
+  container.innerHTML = '';
+  if (count <= 0) return;
+  for (let i = 1; i <= count; i++) {
+    const sid = 'sp_' + i;
+    const div = document.createElement('div');
+    div.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:12px';
+    div.innerHTML = `
+      <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px">Splitter ${i}</div>
+      <label class="field-label" style="margin-top:0"><span class="field-dot"></span>Tipo de salidas</label>
+      <div class="pill-group" id="spTipo_${sid}">
+        <div class="pill" onclick="selectPill(this,'spTipo_${sid}')">2 salidas</div>
+        <div class="pill" onclick="selectPill(this,'spTipo_${sid}')">3 salidas</div>
+        <div class="pill" onclick="selectPill(this,'spTipo_${sid}')">4 salidas</div>
+        <div class="pill" onclick="selectPill(this,'spTipo_${sid}')">8 salidas</div>
+        <div class="pill" onclick="selectPill(this,'spTipo_${sid}',true)">Otro</div>
+      </div>
+      <div class="other-input" id="spTipo_${sid}_other" style="margin-top:6px">
+        <input type="text" id="spTipo_${sid}_otherVal" placeholder="Especificá el tipo">
+      </div>
+      <label class="field-label" style="margin-top:10px"><span class="field-dot"></span>Terminadores</label>
+      <div class="pill-group" id="spTerm_${sid}">
+        <div class="pill" onclick="selectPill(this,'spTerm_${sid}');toggleTermComentario(false,'${sid}')">1</div>
+        <div class="pill" onclick="selectPill(this,'spTerm_${sid}');toggleTermComentario(false,'${sid}')">2</div>
+        <div class="pill" onclick="selectPill(this,'spTerm_${sid}');toggleTermComentario(false,'${sid}')">3</div>
+        <div class="pill" onclick="selectPill(this,'spTerm_${sid}');toggleTermComentario(false,'${sid}')" style="border-color:#86efac;color:#16a34a">Todas en uso</div>
+        <div class="pill" onclick="selectSiNo(this,'spTerm_${sid}','no');toggleTermComentario(true,'${sid}')">❌ No hay</div>
+        <div class="pill" onclick="selectPill(this,'spTerm_${sid}',true);toggleTermComentario(false,'${sid}')">Otro</div>
+      </div>
+      <div class="other-input" id="spTerm_${sid}_other" style="margin-top:6px">
+        <input type="text" id="spTerm_${sid}_otherVal" placeholder="Detalle terminadores">
+      </div>
+      <div id="termComentarioDiv_${sid}" style="display:none;margin-top:8px">
+        <div style="background:#fef2f2;border:1px solid #fca5a5;border-left:3px solid #dc2626;border-radius:8px;padding:10px 12px;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:700;color:#dc2626">⚠️ Riesgo de ingreso de ruido</span>
+          <p style="font-size:12px;color:#6b7280;margin-top:2px">Los puertos sin carga afectan la red. Documentá el motivo.</p>
+        </div>
+        <textarea rows="2" id="termComent_${sid}" placeholder="Motivo (ej: salida dañada, falta material...)" style="margin:0;font-size:13px"></textarea>
+      </div>`;
+    container.appendChild(div);
+  }
+}
+
+function getSplittersData() {
+  const results = [];
+  let i = 1;
+  while (document.getElementById('spTipo_sp_' + i)) {
+    const sid = 'sp_' + i;
+    const tipo = getGroupVal('spTipo_' + sid);
+    const term = getGroupVal('spTerm_' + sid);
+    const comentEl = document.getElementById('termComent_' + sid);
+    const coment = comentEl ? comentEl.value.trim() : '';
+    results.push({ num: i, tipo, term, coment });
+    i++;
+  }
+  return results;
+}
+
+// ─── TOGGLE FAN (muestra campo valor si hay atenuador) ───
+function toggleFan(show) {
+  document.getElementById('fanValDiv').style.display = show ? 'block' : 'none';
+}
+function addSN() {
+  const list = document.getElementById('snList');
+  const n = list.children.length + 1;
+  const row = document.createElement('div');
+  row.className = 'sn-row';
+  row.innerHTML = `
+    <div class="sn-num">${n}</div>
+    <input type="text" placeholder="S/N Deco ${n}">
+    <button class="sn-del" onclick="removeSN(this)">×</button>`;
+  list.appendChild(row);
+  renumberSN();
+}
+
+function removeSN(btn) {
+  btn.parentElement.remove();
+  renumberSN();
+}
+
+function renumberSN() {
+  document.querySelectorAll('#snList .sn-row').forEach((r, i) => {
+    r.querySelector('.sn-num').textContent = i + 1;
+    r.querySelector('input').placeholder = 'S/N Deco ' + (i + 1);
+  });
+}
+
+function getSNList() {
+  return [...document.querySelectorAll('#snList .sn-row input')]
+    .map((inp, i) => ({ num: i + 1, val: inp.value.trim() || '—' }));
+}
+
+// ─── GET VALUES ───
+function getGroupVal(groupId) {
+  const group = document.getElementById(groupId);
+  if (!group) return '—';
+  const sel = group.querySelector('.pill.selected, .pill.si, .pill.no');
+  if (!sel) return '—';
+  const text = sel.innerText.trim();
+  if (text === 'Otro') {
+    const val = document.getElementById(groupId + '_otherVal')?.value?.trim();
+    return val || 'Otro (sin especificar)';
+  }
+  // Eliminar emoji/símbolos del inicio, quedarse solo con el texto
+  return text.replace(/^[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ0-9]+/, '').trim();
+}
+
+function v(id) {
+  return document.getElementById(id)?.value?.trim() || '—';
+}
+
+// ─── NAVIGATION ───
+function goTo(step) {
+  document.getElementById('sec' + currentStep).classList.remove('active');
+  document.querySelectorAll('.step-btn')[currentStep].classList.remove('active');
+  currentStep = step;
+  document.getElementById('sec' + currentStep).classList.add('active');
+  document.querySelectorAll('.step-btn')[currentStep].classList.add('active');
+  const pct = Math.round(((step + 1) / totalSteps) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = 'Paso ' + (step + 1) + ' de ' + totalSteps;
+  updateNav();
+  if (step === 4) buildSummary();
+  window.scrollTo(0, 0);
+}
+
+function navigate(dir) {
+  const next = currentStep + dir;
+  if (next < 0 || next >= totalSteps) return;
+  if (dir === 1) document.querySelectorAll('.step-btn')[currentStep].classList.add('done');
+  goTo(next);
+}
+
+function updateNav() {
+  document.getElementById('btnPrev').style.display = currentStep > 0 ? 'block' : 'none';
+  document.getElementById('btnNext').style.display = currentStep === totalSteps - 1 ? 'none' : 'block';
+}
+
+// ─── PHOTOS ───
+function handlePhotos(input) {
+  Array.from(input.files).forEach(file => {
+    const r = new FileReader();
+    r.onload = async e => {
+      const compressed = await comprimirImagen(e.target.result, 1200, 0.7);
+      photos.push({ dataUrl: compressed, caption: '' });
+      renderPhotos();
+      guardarFotosDB(photos, 'fotos');
+    };
+    r.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function renderPhotos() {
+  const list = document.getElementById('photoList');
+  if (!list) return;
+  list.innerHTML = '';
+  photos.forEach((p, i) => {
+    const item = document.createElement('div');
+    item.className = 'foto-item';
+    item.innerHTML = `
+      <div class="foto-thumb-sm">
+        <img src="${p.dataUrl}">
+        <button class="foto-del-sm" onclick="removePhoto(${i})">×</button>
+      </div>
+      <div class="foto-info">
+        <span class="foto-num">Foto ${i + 1}</span>
+        <textarea rows="3" placeholder="Comentario (opcional)"
+          style="font-size:13px;resize:none;margin:0"
+          oninput="photos[${i}].caption=this.value;guardarFotosDB(photos,'fotos')">${p.caption}</textarea>
+      </div>`;
+    list.appendChild(item);
+  });
+}
+
+function removePhoto(i) { photos.splice(i, 1); renderPhotos(); guardarFotosDB(photos, 'fotos'); }
+
+// ─── MEDICIONES ───
+function handleMediciones(input) {
+  Array.from(input.files).forEach(file => {
+    const r = new FileReader();
+    r.onload = async e => {
+      const compressed = await comprimirImagen(e.target.result, 1200, 0.7);
+      mediciones.push({ dataUrl: compressed, caption: '' });
+      renderMediciones();
+      guardarFotosDB(mediciones, 'mediciones');
+    };
+    r.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function renderMediciones() {
+  const list = document.getElementById('medList');
+  if (!list) return;
+  list.innerHTML = '';
+  mediciones.forEach((p, i) => {
+    const item = document.createElement('div');
+    item.className = 'foto-item';
+    item.innerHTML = `
+      <div class="foto-thumb-sm">
+        <img src="${p.dataUrl}">
+        <button class="foto-del-sm" onclick="removeMed(${i})">×</button>
+      </div>
+      <div class="foto-info">
+        <span class="foto-num">Medición ${i + 1}</span>
+        <textarea rows="3" placeholder="Comentario (opcional)"
+          style="font-size:13px;resize:none;margin:0"
+          oninput="mediciones[${i}].caption=this.value;guardarFotosDB(mediciones,'mediciones')">${p.caption||''}</textarea>
+      </div>`;
+    list.appendChild(item);
+  });
+}
+
+function removeMed(i) { mediciones.splice(i, 1); renderMediciones(); guardarFotosDB(mediciones, 'mediciones'); }
+
+// ─── CAMPOS EXTRA ───
+let extraFields = [];
+
+function addExtraField() {
+  const id = 'extra_' + Date.now();
+  extraFields.push({ id, label: '', value: '' });
+  renderExtraFields();
+  // Focus en el label del nuevo campo
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('#extraFieldsList .extra-field-row input[placeholder="Nombre del campo"]');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }, 50);
+}
+
+function removeExtraField(id) {
+  extraFields = extraFields.filter(f => f.id !== id);
+  renderExtraFields();
+}
+
+function renderExtraFields() {
+  const container = document.getElementById('extraFieldsList');
+  if (!container) return;
+  container.innerHTML = '';
+  extraFields.forEach((f, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px';
+    row.innerHTML = `
+      <input type="text" placeholder="Nombre del campo" value="${f.label}"
+        oninput="extraFields[${i}].label=this.value" style="margin:0">
+      <input type="text" placeholder="Valor" value="${f.value}"
+        oninput="extraFields[${i}].value=this.value" style="margin:0">
+      <button class="extra-del" onclick="removeExtraField('${f.id}')">×</button>`;
+    container.appendChild(row);
+  });
+}
+
+function buildSummary() {
+  const fanValStr = document.getElementById('fanVal')?.value?.trim();
+  const fanDisplay = getGroupVal('fan') + (fanValStr ? ' — ' + fanValStr : '');
+  const splittersData = getSplittersData();
+  const cantSplitters = getGroupVal('cantSplitters');
+
+  const rows = [
+    ['ID Cliente', v('idCliente')],
+    ['Viñeta / Nodo', v('vineta')],
+    ['Fecha', v('fecha')],
+    ['Observaciones', v('observaciones')],
+    ['Modelo / MAC CM', v('modeloCM')],
+    ['Velocidad contratada', getGroupVal('velocidad')],
+    ['Cantidad STB', getGroupVal('cantStb')],
+    ...getSNList().map(s => ['S/N Deco ' + s.num, s.val]),
+    ['Cable externo', metroEsNA ? 'N/A (visita no realizada)' : (v('metroExt') !== '—' ? v('metroExt') + ' m' : '—')],
+    ['Cable interno', v('metroInt') !== '—' ? v('metroInt') + ' m' : '—'],
+    ['Conectores F', getGroupVal('conectoresF')],
+    ['Grapas', v('grapas')],
+    ['Clamp Cut', getGroupVal('clampcut')],
+    ['Mástil', getGroupVal('mastil')],
+    ['Isolator', getGroupVal('isolador')],
+    ['Splitters', cantSplitters],
+    ...splittersData.map(s => [`  Splitter ${s.num}`, `${s.tipo} | Term: ${s.term}${s.coment ? ' ⚠️ ' + s.coment : ''}`]),
+    ['FAN / Atenuador', fanDisplay],
+    ['Calificación', getGroupVal('calificacion')],
+    ['Instalación estética', getGroupVal('estetica')],
+    ...extraFields.filter(f => f.label).map(f => [f.label, f.value || '—']),
+    ['Fotos de auditoría', photos.length + ' foto(s)'],
+    ['Archivos de medición', mediciones.length + ' archivo(s)'],
+  ];
+
+  document.getElementById('summaryContent').innerHTML = rows
+    .filter(([, val]) => val && val !== '—' && val !== ' — ')
+    .map(([k, val]) => `<div class="sum-row"><span class="sum-key">${k}</span><span class="sum-val">${val}</span></div>`)
+    .join('');
+}
+
+// ─── TOAST ───
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ─── PDF ───
+// ─── PDF ───
+async function generatePDF() {
+  // ── VALIDACIÓN ──
+  let valid = true;
+  const idClienteEl    = document.getElementById('idCliente');
+  const idClienteField = document.getElementById('fieldIdCliente');
+  if (!idClienteEl.value || !idClienteEl.value.trim()) {
+    idClienteField.classList.add('field-error'); valid = false;
+  } else { idClienteField.classList.remove('field-error'); }
+
+  const obsEl    = document.getElementById('observaciones');
+  const obsField = document.getElementById('fieldObservaciones');
+  if (!obsEl.value || !obsEl.value.trim()) {
+    obsField.classList.add('field-error'); valid = false;
+  } else { obsField.classList.remove('field-error'); }
+
+  if (!valid) { showToast('⚠️ Completá los campos obligatorios (*)'); goTo(0); return; }
+
+  const { jsPDF } = window.jspdf;
+  // Carta: 215.9 × 279.4 mm
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+  const W = 215.9, H = 279.4;
+  const mL = 14, mR = 14, mB = 16;
+  const cW  = W - mL - mR;          // 187.9 mm usable
+  const GAP = 5;                     // gap entre columnas
+  const c2W = (cW - GAP) / 2;       // ~91.45 mm cada columna
+  let y = 0;
+
+  // ── PALETA ──
+  const C = {
+    white:       [255, 255, 255],
+    bg:          [248, 249, 252],
+    bgAlt:       [237, 242, 252],
+    text:        [ 17,  24,  39],
+    muted:       [100, 112, 135],
+    border:      [215, 222, 235],
+    accent:      [ 26,  79, 160],
+    accentDk:    [ 15,  50, 110],
+    accentLt:    [219, 234, 254],
+    green:       [ 22, 163,  74],
+    greenBg:     [240, 253, 244],
+    red:         [220,  38,  38],
+    redBg:       [254, 242, 242],
+    orange:      [161,  98,   7],
+    headerBg:    [ 12,  22,  48],
+  };
+
+  const fechaVal  = document.getElementById('fecha').value || '—';
+  const idVal     = document.getElementById('idCliente').value.trim() || '—';
+  const vinetaVal = v('vineta');
+
+  function newPage() { doc.addPage(); y = 15; }
+  function chk(n = 20) { if (y + n > H - mB) newPage(); }
+  function sp(h = 4)   { y += h; }
+
+  // ══════════════════════════════════════════
+  // ENCABEZADO PROFESIONAL
+  // ══════════════════════════════════════════
+  const HDR = 44;
+  doc.setFillColor(...C.headerBg);
+  doc.rect(0, 0, W, HDR, 'F');
+
+  // Franja de color arriba
+  doc.setFillColor(...C.accent);
+  doc.rect(0, 0, W, 4, 'F');
+
+  // Logo
+  if (LOGO_DATA) {
+    try { doc.addImage(LOGO_DATA, 'JPEG', mL, 7, 30, 30); } catch(e) {}
+  }
+  const tX = mL + (LOGO_DATA ? 34 : 0);
+
+  doc.setTextColor(140, 175, 225);
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+  doc.text('REPORTE DE VISITA DE CALIDAD', tX, 16);
+
+  doc.setTextColor(...C.white);
+  doc.setFontSize(15.5); doc.setFont('helvetica', 'bold');
+  doc.text('Auditoría de Instalación HFC', tX, 27);
+
+  // Badge solo ID CLIENTE (derecha) — fecha y nodo van en los datos del cliente
+  const BW = 54, BH = 26, BX = W - mR - BW, BY = 10;
+  doc.setFillColor(32, 78, 160);
+  doc.roundedRect(BX, BY, BW, BH, 3, 3, 'F');
+  doc.setFillColor(22, 60, 135);
+  doc.roundedRect(BX, BY, BW, 12, 3, 3, 'F');
+  doc.setFillColor(32, 78, 160);
+  doc.rect(BX, BY + 9, BW, 3, 'F');
+
+  doc.setTextColor(170, 205, 255);
+  doc.setFontSize(6.5); doc.setFont('helvetica', 'bold');
+  doc.text('ID CLIENTE', BX + BW / 2, BY + 8, { align: 'center' });
+
+  doc.setTextColor(...C.white);
+  doc.setFontSize(idVal.length > 12 ? 8.5 : 13);
+  doc.setFont('helvetica', 'bold');
+  doc.text(idVal, BX + BW / 2, BY + 21, { align: 'center' });
+
+  y = HDR + 7;
+
+  // ══════════════════════════════════════════
+  // HELPERS
+  // ══════════════════════════════════════════
+
+  // Encabezado de sección
+  function secH(num, title) {
+    chk(14);
+    doc.setFillColor(...C.accent);
+    doc.rect(mL, y, cW, 9.5, 'F');
+    doc.setFillColor(...C.accentDk);
+    doc.rect(mL, y, 4, 9.5, 'F');
+    doc.setTextColor(...C.white);
+    doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
+    doc.text((num ? num + '.  ' : '') + title.toUpperCase(), mL + 8, y + 6.6);
+    y += 9.5;
+  }
+
+  // Línea horizontal separadora
+  function hLine() {
+    doc.setDrawColor(...C.border);
+    doc.setLineWidth(0.25);
+    doc.line(mL, y, mL + cW, y);
+  }
+
+  const ROW_H = 8.5;
+  let rowIdx = 0;
+  function resetRows() { rowIdx = 0; }
+
+  // Dibuja una celda de campo: etiqueta (izq) | valor (der)
+  function cell(x, cy, w, label, value) {
+    const lW  = w * 0.44;
+    const vX  = x + lW + 1.5;
+    const vW  = w - lW - 3;
+    const vs  = String(value || '—');
+
+    doc.setTextColor(...C.muted);
+    doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
+    const lLines = doc.splitTextToSize(label, lW - 2);
+    doc.text(lLines[0], x + 3, cy + 5.5);
+
+    let vc = C.text;
+    if (vs === 'Sí' || vs === 'Si')       vc = C.green;
+    else if (vs === 'No')                  vc = C.red;
+    else if (vs.includes('Deficiente'))    vc = C.red;
+    else if (vs.includes('Regular'))       vc = C.orange;
+    else if (vs.includes('Buena'))         vc = C.green;
+
+    doc.setTextColor(...vc);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    const vLines = doc.splitTextToSize(vs, vW);
+    doc.text(vLines[0], vX, cy + 5.5);
+  }
+
+  // Dibuja pares [[label,value],...] en 2 columnas por fila
+  function rows(pairs) {
+    const mid = mL + c2W + GAP / 2;
+    for (let i = 0; i < pairs.length; i += 2) {
+      chk(ROW_H);
+      // Fondo alterno
+      if (rowIdx % 2 === 1) {
+        doc.setFillColor(...C.bg);
+        doc.rect(mL, y, cW, ROW_H, 'F');
+      }
+      // Divisor vertical central (solo si hay 2 celdas)
+      if (i + 1 < pairs.length && pairs[i+1][0]) {
+        doc.setDrawColor(...C.border);
+        doc.setLineWidth(0.3);
+        doc.line(mid, y + 1.5, mid, y + ROW_H - 1.5);
+      }
+      // Celda izquierda
+      if (pairs[i][0]) cell(mL, y, c2W, pairs[i][0], pairs[i][1]);
+      // Celda derecha
+      if (i + 1 < pairs.length && pairs[i+1][0]) {
+        cell(mL + c2W + GAP, y, c2W, pairs[i+1][0], pairs[i+1][1]);
+      }
+      // Borde inferior
+      hLine();
+      y += ROW_H;
+      rowIdx++;
+    }
+  }
+
+  // Fila completa (ancho total)
+  function rowFull(label, value) {
+    chk(ROW_H);
+    if (rowIdx % 2 === 1) {
+      doc.setFillColor(...C.bg);
+      doc.rect(mL, y, cW, ROW_H, 'F');
+    }
+    cell(mL, y, cW, label, value);
+    hLine();
+    y += ROW_H;
+    rowIdx++;
+  }
+
+  // Bloque de texto largo (observaciones, alertas)
+  function textBlock(text, bgColor, accentColor) {
+    if (!text) return;
+    const lines = doc.splitTextToSize(text, cW - 14);
+    const bH = lines.length * 5.2 + 10;
+    chk(bH);
+    doc.setFillColor(...(bgColor || C.accentLt));
+    doc.rect(mL, y, cW, bH, 'F');
+    doc.setFillColor(...(accentColor || C.accent));
+    doc.rect(mL, y, 3.5, bH, 'F');
+    doc.setDrawColor(...C.border); doc.setLineWidth(0.25);
+    doc.rect(mL, y, cW, bH, 'S');
+    doc.setTextColor(...C.text);
+    doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
+    doc.text(lines, mL + 8, y + 7);
+    y += bH + 4;
+  }
+
+  // Micro-encabezado de sub-sección
+  function subH(title) {
+    chk(8);
+    doc.setFillColor(...C.bgAlt);
+    doc.rect(mL, y, cW, 7, 'F');
+    doc.setDrawColor(...C.border); doc.setLineWidth(0.25);
+    doc.line(mL, y, mL + cW, y);
+    doc.line(mL, y + 7, mL + cW, y + 7);
+    doc.setTextColor(...C.accent);
+    doc.setFontSize(7.5); doc.setFont('helvetica', 'bold');
+    doc.text(title.toUpperCase(), mL + 5, y + 5);
+    y += 7;
+  }
+
+  // ══════════════════════════════════════════
+  // SECCIÓN 1: DATOS DEL CLIENTE
+  // ══════════════════════════════════════════
+  secH(1, 'Datos del cliente');
+  resetRows();
+  rows([
+    ['ID Cliente',     v('idCliente')],
+    ['Viñeta / Nodo',  vinetaVal !== '—' ? vinetaVal : '—'],
+    ['Fecha de auditoría', fechaVal],
+  ]);
+
+  // Observaciones
+  const obs = obsEl.value.trim();
+  if (obs) {
+    sp(5);
+    subH('Observaciones generales');
+    textBlock(obs, [235, 243, 255], C.accent);
+  }
+
+  // ══════════════════════════════════════════
+  // SECCIÓN 2: CABLE MODEM Y STB
+  // ══════════════════════════════════════════
+  sp(3);
+  secH(2, 'Cable Modem y STB');
+  resetRows();
+  const snAll = getSNList().map(s => s.val).filter(x => x && x !== '—').join(', ') || '—';
+  rows([
+    ['Modelo / MAC CM',       v('modeloCM')],
+    ['Velocidad contratada',  getGroupVal('velocidad')],
+    ['Cantidad de STB',       getGroupVal('cantStb')],
+    ['S/N Decodificadores',   snAll],
+  ]);
+
+  // ══════════════════════════════════════════
+  // SECCIÓN 3: CABLEADO Y CONECTORES
+  // ══════════════════════════════════════════
+  sp(3);
+  secH(3, 'Cableado y conectores');
+  resetRows();
+  const extVal = metroEsNA ? 'N/A — visita no realizada' : (v('metroExt') !== '—' ? v('metroExt') + ' m' : '—');
+  const intVal = v('metroInt') !== '—' ? v('metroInt') + ' m' : '—';
+  rows([
+    ['Cable utilizado externo', extVal],
+    ['Cable utilizado interno',  intVal],
+    ['Conectores F',             getGroupVal('conectoresF')],
+    ['Grapas utilizadas',        v('grapas')],
+  ]);
+
+  // ══════════════════════════════════════════
+  // SECCIÓN 4: ACCESORIOS DE RED
+  // ══════════════════════════════════════════
+  sp(3);
+  secH(4, 'Accesorios de red');
+  resetRows();
+  const fanValStr = document.getElementById('fanVal')?.value?.trim() || '';
+  const fanFull   = getGroupVal('fan') + (fanValStr ? ' — ' + fanValStr : '');
+  rows([
+    ['Clamp Cut',         getGroupVal('clampcut')],
+    ['Mástil',            getGroupVal('mastil')],
+    ['Isolator',          getGroupVal('isolador')],
+    ['FAN / Atenuador',   fanFull],
+    ['Splitters (cant.)', getGroupVal('cantSplitters')],
+  ]);
+
+  // Detalle de splitters
+  const splittersData = getSplittersData();
+  if (splittersData.length > 0) {
+    sp(3);
+    subH('Detalle de splitters');
+    resetRows();
+    splittersData.forEach(s => {
+      rows([
+        [`Splitter ${s.num} — Tipo`,         s.tipo],
+        [`Splitter ${s.num} — Terminadores`, s.term],
+      ]);
+      if (s.coment) {
+        const warnLines = doc.splitTextToSize('⚠  Sin terminadores: ' + s.coment, cW - 10);
+        const wH = warnLines.length * 5 + 7;
+        chk(wH + 2);
+        doc.setFillColor(...C.redBg);
+        doc.rect(mL, y, cW, wH, 'F');
+        doc.setFillColor(...C.red);
+        doc.rect(mL, y, 3.5, wH, 'F');
+        doc.setTextColor(...C.red);
+        doc.setFontSize(7.5); doc.setFont('helvetica', 'bold');
+        doc.text(warnLines, mL + 7, y + 5.5);
+        y += wH + 2;
+        rowIdx++;
+      }
+    });
+  }
+
+  // ══════════════════════════════════════════
+  // SECCIÓN 5: CALIDAD DE INSTALACIÓN
+  // ══════════════════════════════════════════
+  sp(3);
+  secH(5, 'Calidad de instalación');
+  resetRows();
+  rows([
+    ['Instalación estética', getGroupVal('estetica')],
+    ['Calificación general', getGroupVal('calificacion')],
+  ]);
+
+  // ══════════════════════════════════════════
+  // CAMPOS ADICIONALES
+  // ══════════════════════════════════════════
+  const extraActivos = extraFields.filter(f => f.label);
+  if (extraActivos.length > 0) {
+    sp(3);
+    secH('', 'Campos adicionales');
+    resetRows();
+    const ep = extraActivos.map(f => [f.label, f.value || '—']);
+    rows(ep);
+  }
+
+  // ══════════════════════════════════════════
+  // FOTOS — 2 POR FILA
+  // ══════════════════════════════════════════
+  if (photos.length > 0) {
+    newPage();
+    secH('', 'Fotografías de auditoría');
+    sp(4);
+
+    const PG  = 6;              // gap entre fotos
+    const PW  = (cW - PG) / 2; // ancho de columna de foto
+    const MH  = 110;            // alto máximo por foto
+
+    // Calcula dimensiones respetando relación de aspecto dentro de maxW × maxH
+    function fitImg(nW, nH, maxW, maxH) {
+      const ratio = nW / nH;
+      let w = maxW, h = maxW / ratio;
+      if (h > maxH) { h = maxH; w = maxH * ratio; }
+      return { w, h };
+    }
+
+    for (let i = 0; i < photos.length; i += 2) {
+      const img1 = new Image();
+      await new Promise(r => { img1.onload = r; img1.src = photos[i].dataUrl; });
+      const d1 = fitImg(img1.naturalWidth, img1.naturalHeight, PW - 2, MH);
+
+      let d2 = null;
+      if (i + 1 < photos.length) {
+        const img2 = new Image();
+        await new Promise(r => { img2.onload = r; img2.src = photos[i+1].dataUrl; });
+        d2 = fitImg(img2.naturalWidth, img2.naturalHeight, PW - 2, MH);
+      }
+
+      const rowH = Math.max(d1.h, d2 ? d2.h : 0);
+      const hasCap1 = photos[i].caption;
+      const hasCap2 = i + 1 < photos.length && photos[i+1].caption;
+      const capH = (hasCap1 || hasCap2) ? 11 : 0;
+      chk(rowH + capH + 14);
+
+      // Foto 1 — centrada horizontal y verticalmente en su columna
+      const x1 = mL;
+      doc.setFillColor(238, 241, 247);
+      doc.setDrawColor(...C.border); doc.setLineWidth(0.3);
+      doc.roundedRect(x1, y, PW, rowH + 4, 2, 2, 'FD');
+      const ox1 = x1 + 1 + (PW - 2 - d1.w) / 2;  // centrado horizontal
+      const oy1 = y  + 2 + (rowH - d1.h) / 2;      // centrado vertical
+      try { doc.addImage(photos[i].dataUrl, 'JPEG', ox1, oy1, d1.w, d1.h); } catch(e) {}
+      // Badge
+      doc.setFillColor(...C.accent);
+      doc.roundedRect(x1 + 2, y + 2, 11, 6.5, 1.5, 1.5, 'F');
+      doc.setTextColor(...C.white); doc.setFontSize(6.5); doc.setFont('helvetica', 'bold');
+      doc.text('F' + (i + 1), x1 + 7.5, y + 6.7, { align: 'center' });
+
+      // Foto 2 — centrada en su columna
+      if (d2) {
+        const x2 = mL + PW + PG;
+        doc.setFillColor(238, 241, 247);
+        doc.roundedRect(x2, y, PW, rowH + 4, 2, 2, 'FD');
+        const ox2 = x2 + 1 + (PW - 2 - d2.w) / 2;
+        const oy2 = y  + 2 + (rowH - d2.h) / 2;
+        try { doc.addImage(photos[i+1].dataUrl, 'JPEG', ox2, oy2, d2.w, d2.h); } catch(e) {}
+        doc.setFillColor(...C.accent);
+        doc.roundedRect(x2 + 2, y + 2, 11, 6.5, 1.5, 1.5, 'F');
+        doc.setTextColor(...C.white); doc.setFontSize(6.5); doc.setFont('helvetica', 'bold');
+        doc.text('F' + (i + 2), x2 + 7.5, y + 6.7, { align: 'center' });
+      }
+
+      y += rowH + 6;
+
+      // Pies de foto
+      if (hasCap1 || hasCap2) {
+        doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
+        if (hasCap1) {
+          doc.setTextColor(...C.muted);
+          doc.text(doc.splitTextToSize(photos[i].caption, PW - 4)[0],
+            mL + PW / 2, y + 4, { align: 'center' });
+        }
+        if (hasCap2) {
+          doc.setTextColor(...C.muted);
+          doc.text(doc.splitTextToSize(photos[i+1].caption, PW - 4)[0],
+            mL + PW + PG + PW / 2, y + 4, { align: 'center' });
+        }
+        y += 9;
+      }
+      y += 4;
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // MEDICIONES — 2 POR FILA
+  // ══════════════════════════════════════════
+  if (mediciones.length > 0) {
+    newPage();
+    secH('', 'Mediciones / Niveles de señal');
+    sp(4);
+
+    const MG  = 6;
+    const MW  = (cW - MG) / 2;
+    const MMH = 110;
+
+    function fitImgM(nW, nH, maxW, maxH) {
+      const ratio = nW / nH;
+      let w = maxW, h = maxW / ratio;
+      if (h > maxH) { h = maxH; w = maxH * ratio; }
+      return { w, h };
+    }
+
+    for (let i = 0; i < mediciones.length; i += 2) {
+      const m1 = new Image();
+      await new Promise(r => { m1.onload = r; m1.src = mediciones[i].dataUrl; });
+      const d1 = fitImgM(m1.naturalWidth, m1.naturalHeight, MW - 2, MMH);
+
+      let d2 = null;
+      if (i + 1 < mediciones.length) {
+        const m2 = new Image();
+        await new Promise(r => { m2.onload = r; m2.src = mediciones[i+1].dataUrl; });
+        d2 = fitImgM(m2.naturalWidth, m2.naturalHeight, MW - 2, MMH);
+      }
+
+      const rowH = Math.max(d1.h, d2 ? d2.h : 0);
+      const hasCap1 = mediciones[i].caption;
+      const hasCap2 = i + 1 < mediciones.length && mediciones[i+1].caption;
+      chk(rowH + 14);
+
+      const x1 = mL;
+      doc.setFillColor(238, 247, 241);
+      doc.setDrawColor(...C.border); doc.setLineWidth(0.3);
+      doc.roundedRect(x1, y, MW, rowH + 4, 2, 2, 'FD');
+      const ox1 = x1 + 1 + (MW - 2 - d1.w) / 2;
+      const oy1 = y  + 2 + (rowH - d1.h) / 2;
+      try { doc.addImage(mediciones[i].dataUrl, 'JPEG', ox1, oy1, d1.w, d1.h); } catch(e) {}
+      doc.setFillColor(...C.green);
+      doc.roundedRect(x1 + 2, y + 2, 11, 6.5, 1.5, 1.5, 'F');
+      doc.setTextColor(...C.white); doc.setFontSize(6.5); doc.setFont('helvetica', 'bold');
+      doc.text('M' + (i + 1), x1 + 7.5, y + 6.7, { align: 'center' });
+
+      if (d2) {
+        const x2 = mL + MW + MG;
+        doc.setFillColor(238, 247, 241);
+        doc.roundedRect(x2, y, MW, rowH + 4, 2, 2, 'FD');
+        const ox2 = x2 + 1 + (MW - 2 - d2.w) / 2;
+        const oy2 = y  + 2 + (rowH - d2.h) / 2;
+        try { doc.addImage(mediciones[i+1].dataUrl, 'JPEG', ox2, oy2, d2.w, d2.h); } catch(e) {}
+        doc.setFillColor(...C.green);
+        doc.roundedRect(x2 + 2, y + 2, 11, 6.5, 1.5, 1.5, 'F');
+        doc.setTextColor(...C.white); doc.setFontSize(6.5); doc.setFont('helvetica', 'bold');
+        doc.text('M' + (i + 2), x2 + 7.5, y + 6.7, { align: 'center' });
+      }
+
+      y += rowH + 6;
+      if (hasCap1 || hasCap2) {
+        doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
+        if (hasCap1) {
+          doc.setTextColor(...C.muted);
+          doc.text(doc.splitTextToSize(mediciones[i].caption, MW - 4)[0],
+            mL + MW / 2, y + 4, { align: 'center' });
+        }
+        if (hasCap2) {
+          doc.setTextColor(...C.muted);
+          doc.text(doc.splitTextToSize(mediciones[i+1].caption, MW - 4)[0],
+            mL + MW + MG + MW / 2, y + 4, { align: 'center' });
+        }
+        y += 9;
+      }
+      y += 4;
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // PIE DE PÁGINA EN TODAS LAS HOJAS
+  // ══════════════════════════════════════════
+  const totalPgs = doc.internal.getNumberOfPages();
+  const idClean  = idVal.replace(/\s+/g, '-');
+  for (let pg = 1; pg <= totalPgs; pg++) {
+    doc.setPage(pg);
+    // Fondo del pie
+    doc.setFillColor(...C.bg);
+    doc.rect(0, H - mB, W, mB, 'F');
+    doc.setFillColor(...C.accent);
+    doc.rect(0, H - mB, W, 0.9, 'F');
+    // Texto pie izquierda
+    doc.setTextColor(...C.muted);
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text('Visita Calidad HFC  ·  ' + fechaVal + '  ·  ID: ' + idVal, mL, H - 5.5);
+    // Página
+    doc.setFont('helvetica', 'bold');
+    doc.text('Página ' + pg + ' / ' + totalPgs, W - mR, H - 5.5, { align: 'right' });
+  }
+
+  // ── GUARDAR / ABRIR ──
+  const blob = doc.output('blob');
+  const url  = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  showToast('PDF listo — guardalo desde el navegador');
+  const nombreArchivo = 'reporte - ID ' + idClean + '.pdf';
+  const a = document.createElement('a');
+  a.href = url; a.download = nombreArchivo; a.click();
+}
+
+// ─── METRO N/A ───
+let metroEsNA = false;
+function toggleMetroNA(esNA) {
+  metroEsNA = esNA;
+  document.getElementById('metroExtInput').style.display = esNA ? 'none' : 'grid';
+  document.querySelectorAll('#metroExtNA .pill').forEach(p => p.classList.remove('selected'));
+  document.querySelectorAll('#metroExtNA .pill')[esNA ? 1 : 0].classList.add('selected');
+  if (esNA) document.getElementById('metroExt').value = '';
+  document.getElementById('fieldMetroExt').classList.remove('field-error');
+}
+
+// ─── LIMPIAR FORMULARIO ───
+function limpiarFormulario() {
+  if (!confirm('¿Limpiar todos los campos para una nueva visita?\nLas visitas guardadas en Excel no se borran.')) return;
+
+  // Inputs y textareas
+  document.querySelectorAll('input[type=text], input[type=number], input[type=date], textarea').forEach(el => {
+    el.value = '';
+  });
+
+  // Fecha al día de hoy
+  document.getElementById('fecha').valueAsDate = new Date();
+
+  // Pills — quitar selección
+  document.querySelectorAll('.pill.selected, .pill.si, .pill.no').forEach(p => {
+    p.classList.remove('selected', 'si', 'no');
+  });
+
+  // Other inputs ocultos
+  document.querySelectorAll('.other-input').forEach(d => d.classList.remove('show'));
+
+  // Toggles condicionales
+  document.getElementById('fanValDiv').style.display = 'none';
+  document.getElementById('splittersList').innerHTML = '';
+  document.getElementById('snField').style.display = 'block';
+  document.getElementById('termComentarioDiv_sp_1') && (document.getElementById('splittersList').innerHTML = '');
+
+  // Metro N/A reset
+  metroEsNA = false;
+  document.getElementById('metroExtInput').style.display = 'grid';
+  document.querySelectorAll('#metroExtNA .pill').forEach(p => p.classList.remove('selected'));
+
+  // S/N list reset
+  document.getElementById('snList').innerHTML = '';
+  addSN();
+
+  // Fotos y mediciones
+  photos.length = 0;
+  mediciones.length = 0;
+  renderPhotos();
+  renderMediciones();
+  limpiarFotosDB();
+
+  // Campos extra
+  extraFields = [];
+  renderExtraFields();
+
+  // Errores
+  document.querySelectorAll('.field-error').forEach(f => f.classList.remove('field-error'));
+
+  // Ir al paso 0
+  limpiarBorrador();
+  goTo(0);
+  showToast('✅ Formulario limpio — nueva visita');
+}
+
+// ─── COMPRESIÓN DE IMÁGENES ───
+function comprimirImagen(dataUrl, maxW = 1200, quality = 0.7) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = dataUrl;
+  });
+}
+const STORAGE_KEY = 'visitas_del_dia';
+
+function getVisitas() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+}
+function saveVisitas(arr) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch(e) { showToast('Error al guardar'); }
+}
+
+function recopilarDatos() {
+  const fanValStr = document.getElementById('fanVal')?.value?.trim() || '';
+  const splittersData = getSplittersData();
+  const splittersResumen = splittersData.map(s =>
+    `Splitter ${s.num}: ${s.tipo} | Term: ${s.term}${s.coment ? ' ⚠️ '+s.coment : ''}`
+  ).join(' / ');
+
+  return {
+    'Fecha':               v('fecha'),
+    'ID Cliente':          v('idCliente'),
+    'Viñeta / Nodo':       v('vineta'),
+    'Modelo / MAC CM':     v('modeloCM'),
+    'Velocidad':           getGroupVal('velocidad'),
+    'Cantidad STB':        getGroupVal('cantStb'),
+    'S/N Decos':           getSNList().map(s => s.val).filter(x=>x!=='—').join(', ') || '—',
+    'Cable externo (m)':   metroEsNA ? 'N/A' : (v('metroExt') || '—'),
+    'Cable interno (m)':   v('metroInt'),
+    'Conectores F':        getGroupVal('conectoresF'),
+    'Grapas':              v('grapas'),
+    'Clamp Cut':           getGroupVal('clampcut'),
+    'Mástil':              getGroupVal('mastil'),
+    'Isolator':            getGroupVal('isolador'),
+    'Splitters':           getGroupVal('cantSplitters'),
+    'Detalle splitters':   splittersResumen || '—',
+    'FAN / Atenuador':     getGroupVal('fan') + (fanValStr ? ' — '+fanValStr : ''),
+    'Estética':            getGroupVal('estetica'),
+    'Calificación':        getGroupVal('calificacion'),
+    'Observaciones':       v('observaciones'),
+    'Fotos':               photos.length + ' foto(s)',
+    'Mediciones':          mediciones.length + ' archivo(s)',
+  };
+}
+
+function agregarAlExcel() {
+  // Validar campos obligatorios primero
+  const idOk = document.getElementById('idCliente').value.trim();
+  const obsOk = document.getElementById('observaciones').value.trim();
+  if (!idOk || !obsOk) {
+    showToast('⚠️ Completá los campos obligatorios primero');
+    return;
+  }
+  const visitas = getVisitas();
+  const datos = recopilarDatos();
+  // Verificar si ya existe este ID en el día
+  const existe = visitas.findIndex(v => v['ID Cliente'] === datos['ID Cliente']);
+  if (existe >= 0) {
+    visitas[existe] = datos; // actualizar si ya existe
+    showToast('✅ Visita actualizada en el Excel');
+  } else {
+    visitas.push(datos);
+    showToast('✅ Visita agregada al Excel del día');
+  }
+  saveVisitas(visitas);
+  renderVisitasList();
+}
+
+function renderVisitasList() {
+  const visitas = getVisitas();
+  const list = document.getElementById('visitasList');
+  const count = document.getElementById('visitasCount');
+  if (!list || !count) return;
+  count.textContent = visitas.length + (visitas.length === 1 ? ' visita' : ' visitas');
+  if (!visitas.length) {
+    list.innerHTML = '<p style="color:var(--muted);font-size:13px;text-align:center;padding:8px 0">Aún no hay visitas guardadas hoy.</p>';
+    return;
+  }
+  list.innerHTML = visitas.map((vis, i) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">${vis['ID Cliente'] || '—'}</div>
+        <div style="font-size:11px;color:var(--muted)">${vis['Viñeta / Nodo'] || ''} · ${vis['Calificación'] || '—'}</div>
+      </div>
+      <button onclick="quitarVisita(${i})" style="background:var(--red-bg);border:1px solid var(--red-border);border-radius:6px;color:var(--red);width:28px;height:28px;font-size:14px;cursor:pointer">×</button>
+    </div>`).join('');
+}
+
+function quitarVisita(i) {
+  const visitas = getVisitas();
+  visitas.splice(i, 1);
+  saveVisitas(visitas);
+  renderVisitasList();
+  showToast('Visita eliminada');
+}
+
+function limpiarVisitas() {
+  if (!confirm('¿Borrar todas las visitas del día?')) return;
+  saveVisitas([]);
+  renderVisitasList();
+  showToast('Visitas del día eliminadas');
+}
+
+function exportarExcel() {
+  const visitas = getVisitas();
+  if (!visitas.length) { showToast('No hay visitas para exportar'); return; }
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(visitas);
+  // Ancho de columnas
+  const cols = Object.keys(visitas[0]).map(k => ({ wch: Math.max(k.length, 18) }));
+  ws['!cols'] = cols;
+  XLSX.utils.book_append_sheet(wb, ws, 'Visitas');
+  const fecha = visitas[0]['Fecha'] || new Date().toISOString().split('T')[0];
+  XLSX.writeFile(wb, `visitas_${fecha}.xlsx`);
+  showToast('📊 Excel exportado');
+}
+// ─── EXCEL ACUMULADO (una pestaña por día) ───
+const EXCEL_STORAGE_KEY = 'excel_acumulado';
+
+function getExcelAcumulado() {
+  try { return JSON.parse(localStorage.getItem(EXCEL_STORAGE_KEY) || '{}'); } catch { return {}; }
+}
+function saveExcelAcumulado(data) {
+  try { localStorage.setItem(EXCEL_STORAGE_KEY, JSON.stringify(data)); } catch(e) { showToast('Error al guardar Excel'); }
+}
+
+function exportarExcel() {
+  // Tomar visitas del día actual y guardarlas en el acumulado
+  const visitas = getVisitas();
+  const acumulado = getExcelAcumulado();
+  const hoy = new Date().toISOString().split('T')[0];
+
+  if (visitas.length > 0) {
+    acumulado[hoy] = visitas;
+    saveExcelAcumulado(acumulado);
+  }
+
+  const dias = Object.keys(acumulado).sort();
+  if (!dias.length) { showToast('No hay datos para exportar'); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  dias.forEach(dia => {
+    const filas = acumulado[dia];
+    if (!filas || !filas.length) return;
+    const ws = XLSX.utils.json_to_sheet(filas);
+    const cols = Object.keys(filas[0]).map(k => ({ wch: Math.max(k.length, 18) }));
+    ws['!cols'] = cols;
+    // Nombre de pestaña: dd/mm
+    const [y, m, d] = dia.split('-');
+    const nombrePest = `${d}-${m}-${y}`;
+    XLSX.utils.book_append_sheet(wb, ws, nombrePest);
+  });
+
+  // Pestaña resumen con todas las visitas juntas
+  const todasLasVisitas = dias.flatMap(d => acumulado[d] || []);
+  if (todasLasVisitas.length > 0) {
+    const wsTotal = XLSX.utils.json_to_sheet(todasLasVisitas);
+    const colsTotal = Object.keys(todasLasVisitas[0]).map(k => ({ wch: Math.max(k.length, 18) }));
+    wsTotal['!cols'] = colsTotal;
+    XLSX.utils.book_append_sheet(wb, wsTotal, 'Todas las visitas');
+  }
+
+  const semana = `semana_${hoy}`;
+  XLSX.writeFile(wb, `visitas_${semana}.xlsx`);
+  showToast('📊 Excel exportado — ' + dias.length + ' día(s)');
+}
+
+function limpiarExcelAcumulado() {
+  const acumulado = getExcelAcumulado();
+  const dias = Object.keys(acumulado).length;
+  if (!dias) { showToast('No hay historial guardado'); return; }
+
+  const confirma = prompt(
+    `Estás a punto de borrar el historial de ${dias} día(s) con todas sus visitas.\n\nEsta acción NO se puede deshacer.\n\nEscribí BORRAR para confirmar:`
+  );
+  if (confirma === null) return; // canceló
+  if (confirma.trim().toUpperCase() !== 'BORRAR') {
+    showToast('❌ Texto incorrecto — historial no borrado');
+    return;
+  }
+  localStorage.removeItem(EXCEL_STORAGE_KEY);
+  showToast('Historial eliminado');
+}
+
+// ─── BORRADOR AUTOMÁTICO ───
+const DRAFT_KEY = 'borrador_visita';
+
+function guardarBorrador() {
+  try {
+    const draft = {
+      // Campos de texto
+      idCliente:    document.getElementById('idCliente')?.value || '',
+      vineta:       document.getElementById('vineta')?.value || '',
+      fecha:        document.getElementById('fecha')?.value || '',
+      observaciones:document.getElementById('observaciones')?.value || '',
+      modeloCM:     document.getElementById('modeloCM')?.value || '',
+      metroExt:     document.getElementById('metroExt')?.value || '',
+      metroInt:     document.getElementById('metroInt')?.value || '',
+      grapas:       document.getElementById('grapas')?.value || '',
+      fanVal:       document.getElementById('fanVal')?.value || '',
+      metroEsNA,
+      // S/N list
+      snList: getSNList().map(s => s.val),
+      // Pills — guardar texto del seleccionado
+      pills: {},
+      // Campos "otro"
+      otros: {},
+    };
+
+    // Guardar pills seleccionados
+    const grupos = ['velocidad','cantStb','cantSplitters','conectoresF','isolador',
+                    'clampcut','mastil','fan','estetica','calificacion'];
+    grupos.forEach(gid => {
+      const sel = document.querySelector(`#${gid} .pill.selected, #${gid} .pill.si, #${gid} .pill.no`);
+      draft.pills[gid] = sel ? sel.innerText.trim() : '';
+      const otroEl = document.getElementById(gid + '_otherVal');
+      if (otroEl) draft.otros[gid] = otroEl.value || '';
+    });
+
+    // Campos extra
+    draft.extraFields = extraFields.map(f => ({ ...f }));
+
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch(e) {}
+}
+
+function restaurarBorrador() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    const draft = JSON.parse(raw);
+
+    // Restaurar campos de texto
+    const setVal = (id, val) => { const el = document.getElementById(id); if(el && val) el.value = val; };
+    setVal('idCliente', draft.idCliente);
+    setVal('vineta', draft.vineta);
+    setVal('fecha', draft.fecha);
+    setVal('observaciones', draft.observaciones);
+    setVal('modeloCM', draft.modeloCM);
+    setVal('metroExt', draft.metroExt);
+    setVal('metroInt', draft.metroInt);
+    setVal('grapas', draft.grapas);
+    setVal('fanVal', draft.fanVal);
+
+    // Metro N/A
+    if (draft.metroEsNA) toggleMetroNA(true);
+
+    // S/N list
+    if (draft.snList && draft.snList.length) {
+      document.getElementById('snList').innerHTML = '';
+      draft.snList.forEach(sn => {
+        addSN();
+        const inputs = document.querySelectorAll('#snList .sn-row input');
+        if (inputs.length) inputs[inputs.length - 1].value = sn;
+      });
+    }
+
+    // Pills
+    if (draft.pills) {
+      Object.entries(draft.pills).forEach(([gid, texto]) => {
+        if (!texto) return;
+        const group = document.getElementById(gid);
+        if (!group) return;
+        group.querySelectorAll('.pill').forEach(p => {
+          if (p.innerText.trim() === texto) {
+            p.click();
+          }
+        });
+        const otroVal = draft.otros?.[gid];
+        if (otroVal) { const el = document.getElementById(gid+'_otherVal'); if(el) el.value = otroVal; }
+      });
+    }
+
+    // Fan toggle
+    if (draft.pills?.fan) {
+      const fanSi = draft.pills.fan.includes('Sí') || draft.pills.fan.includes('Si');
+      toggleFan(fanSi);
+    }
+
+    // Extra fields
+    if (draft.extraFields?.length) {
+      extraFields = draft.extraFields;
+      renderExtraFields();
+    }
+
+    showToast('📋 Borrador restaurado');
+  } catch(e) {}
+}
+
+function limpiarBorrador() {
+  localStorage.removeItem(DRAFT_KEY);
+}
+
+// ─── INIT ───
+document.getElementById('fecha').valueAsDate = new Date();
+addSN();
+updateNav();
+renderVisitasList();
+
+// Abrir DB, restaurar fotos y borrador
+abrirDB().then(async () => {
+  // Restaurar fotos
+  const fotosGuardadas = await leerFotosDB('fotos');
+  const medsGuardadas  = await leerFotosDB('mediciones');
+  if (fotosGuardadas.length) {
+    fotosGuardadas.forEach(f => photos.push({ dataUrl: f.dataUrl, caption: f.caption }));
+    renderPhotos();
+  }
+  if (medsGuardadas.length) {
+    medsGuardadas.forEach(f => mediciones.push({ dataUrl: f.dataUrl, caption: f.caption }));
+    renderMediciones();
+  }
+  // Restaurar borrador de campos
+  if (localStorage.getItem(DRAFT_KEY)) {
+    restaurarBorrador();
+  }
+  if (fotosGuardadas.length || medsGuardadas.length) {
+    showToast('📋 Borrador restaurado — fotos incluidas');
+  }
+});
+
+// Guardar borrador cada 10 segundos automáticamente
+setInterval(guardarBorrador, 10000);
+
+// También guardar al cambiar cualquier input
+document.addEventListener('input', guardarBorrador);
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('pill')) setTimeout(guardarBorrador, 100);
+});
+</script>
+</body>
+</html>
